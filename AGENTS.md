@@ -229,14 +229,37 @@ Notes:
 - shadcn/ui components in `components/ui` are **owned code** — edit them freely;
   add more with `npx shadcn@latest add <name>`.
 
+### Continuous integration & local git hooks
+
+- **CI (GitHub Actions, `.github/workflows/ci.yml`, workflow name "Verify")** runs
+  `npm run verify` on Node 22 for: pull requests targeting `main`, pushes to
+  `main`, and manual dispatch. Draft PRs are skipped (marking a draft "ready for
+  review" triggers it). Outdated runs for the same branch/PR are auto-cancelled.
+- **Native git hooks** live in `.githooks/` (no Husky). Enable once per clone:
+
+  ```bash
+  git config core.hooksPath .githooks
+  chmod +x .githooks/pre-commit .githooks/pre-push
+  ```
+
+  - `pre-commit` (read-only gate): `npm run check` → `npm run typecheck` → `npm run test`.
+    It never auto-formats; fix issues with `npm run check:fix` and re-commit.
+  - `pre-push`: `npm run verify` (the same command CI runs).
+- Hooks run in your **local terminal** and consume no LLM tokens; only pasting
+  full logs back into an agent does. Paste back only the relevant failing lines.
+
 ---
 
 ## 6. Testing & commit workflow
 
 - After each implementation step, run lint / typecheck / tests / build where
   applicable. Keep changes small and reviewable.
-- **Before every commit run `npm run verify`** (Biome + typecheck + tests + build).
-  **Do not commit a broken build or red tests.**
+- **Before committing**, run the pre-commit-level checks: `npm run check`,
+  `npm run typecheck`, `npm run test` (the `.githooks/pre-commit` hook does this
+  automatically once enabled).
+- **Before pushing**, run **`npm run verify`** — the authoritative full check
+  (Biome + typecheck + tests + build). **Never commit/push a broken build or red
+  tests.** CI runs the same command on the PR's commit.
 - Test layout (`tests/`): pure logic (time, active-segment, playback-store,
   mock-data), the mock API surface (reads, save success + failure + revision,
   generation, export incl. real DOCX blob), the Markdown→docx converter, the
@@ -249,12 +272,21 @@ Notes:
 
 ## 7. Git / GitHub collaboration rules
 
+- **Follow the label-based issue/PR workflow in
+  [`docs/agent-github-flow.md`](./docs/agent-github-flow.md).** Agents drive
+  `issue-status:*` and `pr-status:*` label transitions there (exactly one of each
+  family active at a time). Labels are workflow communication, **not** a
+  substitute for the CI "Verify" status check on the PR's commit.
+- Branch naming: `issue-<issue-number>-short-slug`. PRs reference the issue with
+  `Closes #<n>` / `Refs #<n>` and include a summary + test plan.
 - This project was scaffolded with its own git repo. Commit only when asked.
-- Branch off `main`; keep PRs small and focused; never commit a failing
-  `npm run verify`.
+- Branch off `main`; keep PRs small and focused; never commit/push a failing
+  `npm run verify` (CI runs it on every PR and push to `main`).
 - Don't commit secrets. `.env` is gitignored; only `.env.example` is tracked.
 - Don't hand-edit generated files (`src/routeTree.gen.ts`).
 - Update `AGENTS.md` whenever architecture, commands, env vars, or workflow change.
+  When the **development/GitHub workflow** changes, update `AGENTS.md` **and**
+  `docs/agent-github-flow.md` together.
 - Conventional, imperative commit messages (e.g. `feat: add export options form`).
 
 ---
@@ -310,7 +342,9 @@ Notes:
 - Add persistence for edits/outputs; surface project create/delete (the sidebar
   is read-only today).
 - Consider server-side DOCX/Markdown export endpoints to shrink the client bundle.
-- Expand tests: virtualization behaviour, full generate→export flow, a11y checks;
-  add CI running `npm run verify`.
+- Expand tests: virtualization behaviour, full generate→export flow, a11y checks.
 - Optional: optimistic concurrency UI using `revision` (conflict detection on save).
+
+> CI is in place — GitHub Actions runs `npm run verify` on PRs and pushes to
+> `main` (`.github/workflows/ci.yml`); see §5 and `docs/agent-github-flow.md`.
 ```

@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+set -eu
+
+# Read-only quality gate. Does NOT auto-format or mutate files — if `npm run
+# check` reports formatting/lint issues, fix them manually (e.g. `npm run
+# check:fix`) and commit again.
+#
+# Enable once per clone with: git config core.hooksPath .githooks
+
+npm run check
+npm run typecheck
+npm run test

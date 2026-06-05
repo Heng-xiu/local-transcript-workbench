@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+set -eu
+
+# Full verification before pushing — the same authoritative command CI runs
+# (Biome check + typecheck + tests + build).
+#
+# Enable once per clone with: git config core.hooksPath .githooks
+
+npm run verify

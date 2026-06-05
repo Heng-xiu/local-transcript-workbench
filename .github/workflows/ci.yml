@@ -1,0 +1,45 @@
+name: Verify
+
+# Code verification runs on events that carry a concrete commit SHA: pull
+# requests against main, pushes to main, and manual dispatch. The `labeled`
+# PR event is included so re-labelling a PR can re-trigger a run, but labels
+# are workflow communication — they are NOT the primary test trigger.
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Least privilege: the verify job only needs to read the repository.
+permissions:
+  contents: read
+
+# Cancel superseded runs for the same branch/PR so only the latest commit is verified.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+    # Always run for push / manual dispatch; for PRs, skip drafts (a draft
+    # becoming "ready_for_review" re-triggers and runs the gate).
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify (Biome + typecheck + tests + build)
+        run: npm run verify
