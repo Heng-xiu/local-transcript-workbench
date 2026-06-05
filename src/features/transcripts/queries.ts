@@ -3,11 +3,23 @@ import { api } from "@/lib/api";
 
 export const transcriptKeys = {
 	all: ["transcripts"] as const,
+	list: () => [...transcriptKeys.all, "list"] as const,
 	detail: (transcriptId: string) =>
 		[...transcriptKeys.all, "detail", transcriptId] as const,
 	audio: (transcriptId: string) =>
 		[...transcriptKeys.all, "audio", transcriptId] as const,
 };
+
+export function transcriptListItemsQueryOptions() {
+	return queryOptions({
+		queryKey: transcriptKeys.list(),
+		queryFn: () => api.listTranscriptListItems(),
+	});
+}
+
+export function useTranscriptListItemsQuery() {
+	return useQuery(transcriptListItemsQueryOptions());
+}
 
 export function transcriptQueryOptions(transcriptId: string) {
 	return queryOptions({

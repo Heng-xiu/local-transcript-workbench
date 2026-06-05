@@ -5,7 +5,6 @@ import { describe, expect, it } from "vitest";
 import { WorkbenchLayout } from "@/components/layout/WorkbenchLayout";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { createQueryClient } from "@/lib/query-client";
-import { mockDataset } from "@/lib/mock-data";
 
 function renderWithProviders(ui: ReactNode) {
 	const queryClient = createQueryClient();
@@ -17,30 +16,36 @@ function renderWithProviders(ui: ReactNode) {
 }
 
 describe("WorkbenchLayout (full mount)", () => {
-	it("mounts all three panels and loads a project's transcript", async () => {
-		const project = mockDataset.projects[0];
-
+	it("mounts the app shell and the transcript editor for a ready transcript", async () => {
 		renderWithProviders(
 			<WorkbenchLayout
-				selectedProjectId={project.id}
-				transcriptId={project.transcriptId}
-				activeProject={project}
-				onSelectProject={() => {}}
+				section="transcripts"
+				meetingId={undefined}
+				transcriptId="tr_q3-strategy"
+				recordId={undefined}
+				onSelectSection={() => {}}
+				onSelectMeeting={() => {}}
+				onOpenTranscript={() => {}}
+				onOpenRecord={() => {}}
 			/>,
 		);
 
-		// Header + active project name.
-		expect(screen.getByText("Transcript Workbench")).toBeInTheDocument();
-		expect(screen.getAllByText(project.name).length).toBeGreaterThan(0);
+		// App header brand + global navigation rail.
+		expect(screen.getByText("Meeting Workbench")).toBeInTheDocument();
+		expect(
+			screen.getByRole("button", { name: "Transcripts" }),
+		).toBeInTheDocument();
 
-		// Right panel renders its primary action.
+		// The virtualised editor loads the transcript's segments (async); the
+		// editor + right AI panel mount once the transcript is known to be ready.
+		await waitFor(
+			() => expect(screen.getByText(/\d+ segments/)).toBeInTheDocument(),
+			{ timeout: 4000 },
+		);
+
+		// The right AI panel renders its primary action.
 		expect(
 			screen.getByRole("button", { name: "Generate" }),
 		).toBeInTheDocument();
-
-		// Sidebar loads the project list (async) and the transcript meta renders.
-		await waitFor(() =>
-			expect(screen.getByText(/segments$/)).toBeInTheDocument(),
-		);
 	});
 });

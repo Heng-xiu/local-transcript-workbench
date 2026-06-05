@@ -1,18 +1,29 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
 import { z } from "zod";
 import { WorkbenchLayout } from "@/components/layout/WorkbenchLayout";
-import { useProjectQuery, useProjectsQuery } from "@/features/projects/queries";
-import type { Project } from "@/features/projects/types";
+import {
+	type NavigationSection,
+	resolveSection,
+} from "@/features/navigation/types";
 
 /**
- * Selection lives in the URL (TanStack Router search params) so the workbench
- * is deep-linkable and back/forward navigable.
+ * All selection lives in the URL (TanStack Router search params) so the app is
+ * deep-linkable and back/forward navigable. `section` selects the workflow
+ * section; the per-section ids track the active row. `projectId` is retained for
+ * backward-compatible deep links (the transcript editor derives it now).
  */
 const searchSchema = z.object({
-	projectId: z.string().optional().catch(undefined),
+	section: z
+		.enum(["meetings", "transcripts", "records", "settings"])
+		.optional()
+		.catch(undefined),
+	meetingId: z.string().optional().catch(undefined),
 	transcriptId: z.string().optional().catch(undefined),
+	recordId: z.string().optional().catch(undefined),
+	projectId: z.string().optional().catch(undefined),
 });
+
+type WorkbenchSearch = z.infer<typeof searchSchema>;
 
 export const Route = createFileRoute("/")({
 	validateSearch: (search) => searchSchema.parse(search),
@@ -20,35 +31,26 @@ export const Route = createFileRoute("/")({
 });
 
 function WorkbenchRoute() {
-	const { projectId, transcriptId } = Route.useSearch();
+	const search = Route.useSearch();
 	const navigate = useNavigate({ from: Route.fullPath });
-	const projectsQuery = useProjectsQuery();
-	const activeProjectQuery = useProjectQuery(projectId);
+	const section = resolveSection(search);
 
-	function selectProject(project: Project) {
-		void navigate({
-			search: { projectId: project.id, transcriptId: project.transcriptId },
-		});
+	function go(next: Partial<WorkbenchSearch>) {
+		void navigate({ search: (prev) => ({ ...prev, ...next }) });
 	}
-
-	// Open the most recently updated project on first load for a useful landing.
-	useEffect(() => {
-		if (projectId || !projectsQuery.data?.length) return;
-		const first = [...projectsQuery.data].sort(
-			(a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt),
-		)[0];
-		void navigate({
-			search: { projectId: first.id, transcriptId: first.transcriptId },
-			replace: true,
-		});
-	}, [projectId, projectsQuery.data, navigate]);
 
 	return (
 		<WorkbenchLayout
-			selectedProjectId={projectId}
-			transcriptId={transcriptId}
-			activeProject={activeProjectQuery.data}
-			onSelectProject={selectProject}
+			section={section}
+			meetingId={search.meetingId}
+			transcriptId={search.transcriptId}
+			recordId={search.recordId}
+			onSelectSection={(next: NavigationSection) => go({ section: next })}
+			onSelectMeeting={(meetingId) => go({ section: "meetings", meetingId })}
+			onOpenTranscript={(transcriptId) =>
+				go({ section: "transcripts", transcriptId })
+			}
+			onOpenRecord={(recordId) => go({ section: "records", recordId })}
 		/>
 	);
 }

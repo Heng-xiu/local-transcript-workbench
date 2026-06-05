@@ -41,3 +41,11 @@ if (!window.matchMedia) {
 if (!Element.prototype.scrollIntoView) {
 	Element.prototype.scrollIntoView = () => {};
 }
+
+// Blob downloads (export) go through URL.createObjectURL, unimplemented in jsdom.
+if (!URL.createObjectURL) {
+	URL.createObjectURL = (() => "blob:mock") as typeof URL.createObjectURL;
+}
+if (!URL.revokeObjectURL) {
+	URL.revokeObjectURL = (() => {}) as typeof URL.revokeObjectURL;
+}

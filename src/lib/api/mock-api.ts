@@ -6,16 +6,30 @@
  * mutate the in-memory dataset so they persist for the session.
  */
 import type { GeneratedOutput } from "@/features/ai/types";
-import type { ExportRequest, ExportResult } from "@/features/export/types";
+import type {
+	ExportFormat,
+	ExportRequest,
+	ExportResult,
+} from "@/features/export/types";
 import type { LiveKitConnectionInfo } from "@/features/livekit-placeholder/types";
 import type { Project } from "@/features/projects/types";
+import type { MeetingRecord } from "@/features/records/types";
 import type { TranscriptSegment } from "@/features/segments/types";
+import type {
+	LocalIntegrationStatus,
+	StorageStatus,
+} from "@/features/settings/types";
 import type { AudioSource, Transcript } from "@/features/transcripts/types";
 import { env } from "@/lib/config/env";
 import { buildDocxBlob } from "@/lib/docx";
 import { mockDataset } from "@/lib/mock-data";
 import { buildMockMarkdown } from "@/lib/mock-data/generators";
-import { OUTPUT_TEMPLATES } from "@/lib/mock-data/templates";
+import { coerceTemplateId, OUTPUT_TEMPLATES } from "@/lib/mock-data/templates";
+import {
+	buildIntegrationStatuses,
+	buildStorageStatus,
+	workbenchData,
+} from "@/lib/mock-data/workbench-fixtures";
 import { delay, MockApiError, shouldSimulateSaveFailure } from "./latency";
 import type {
 	GenerateOptions,
@@ -62,7 +76,145 @@ function modelForProvider(): string {
 		: "local/llama-3.1-8b-instruct";
 }
 
+function requireRecord(recordId: string): MeetingRecord {
+	const record = workbenchData.recordById.get(recordId);
+	if (!record) throw new MockApiError(`Record not found: ${recordId}`);
+	return record;
+}
+
+/** Adapt a stored record into the `GeneratedOutput` shape the exporter expects. */
+function recordToGeneratedOutput(record: MeetingRecord): GeneratedOutput {
+	const transcript = mockDataset.transcriptById.get(record.transcriptId);
+	return {
+		id: `out_${record.id}`,
+		projectId: transcript?.projectId ?? "",
+		transcriptId: record.transcriptId,
+		templateId: coerceTemplateId(record.templateId),
+		provider: env.aiProviderMode,
+		model: modelForProvider(),
+		markdown: record.markdown ?? "",
+		createdAt: record.updatedAt,
+	};
+}
+
 export const mockApi: WorkbenchApi = {
+	async listMeetings() {
+		await delay(180);
+		return clone(workbenchData.meetings);
+	},
+
+	async getMeeting(meetingId) {
+		await delay(120);
+		const meeting = workbenchData.meetingById.get(meetingId);
+		if (!meeting) throw new MockApiError(`Meeting not found: ${meetingId}`);
+		return clone(meeting);
+	},
+
+	async listTranscriptListItems() {
+		await delay(180);
+		return clone(workbenchData.transcriptListItems);
+	},
+
+	async listMeetingRecords() {
+		await delay(180);
+		return clone(workbenchData.records);
+	},
+
+	async getMeetingRecord(recordId) {
+		await delay(120);
+		return clone(requireRecord(recordId));
+	},
+
+	async generateMeetingRecord(transcriptId, templateId) {
+		// Simulated backend generation job.
+		await delay(950);
+		if (workbenchData.generationFailingTranscriptIds.has(transcriptId)) {
+			throw new MockApiError(
+				"Record generation failed for this transcript. Retry to try again.",
+			);
+		}
+		const transcript = requireTranscript(transcriptId);
+		const project = requireProject(transcript.projectId);
+		const segments = requireSegments(transcriptId);
+		const safeTemplateId = coerceTemplateId(templateId);
+		const markdown = buildMockMarkdown(safeTemplateId, {
+			project,
+			transcript,
+			segments,
+		});
+		const now = nowIso();
+
+		const existing = workbenchData.recordByTranscriptId.get(transcriptId);
+		if (existing) {
+			existing.status = "ready";
+			existing.markdown = markdown;
+			existing.templateId = safeTemplateId;
+			existing.updatedAt = now;
+			return clone(existing);
+		}
+
+		const meeting = workbenchData.meetingByTranscriptId.get(transcriptId);
+		const record: MeetingRecord = {
+			id: `rec_${transcriptId}`,
+			meetingId: meeting?.id,
+			transcriptId,
+			title: `${project.name} — Meeting Record`,
+			templateId: safeTemplateId,
+			status: "ready",
+			markdown,
+			updatedAt: now,
+		};
+		workbenchData.records.push(record);
+		workbenchData.recordById.set(record.id, record);
+		workbenchData.recordByTranscriptId.set(transcriptId, record);
+		if (meeting) meeting.recordId = record.id;
+		return clone(record);
+	},
+
+	async exportMeetingRecord(
+		recordId: string,
+		format: ExportFormat,
+	): Promise<ExportResult> {
+		await delay(260);
+		const record = requireRecord(recordId);
+		if (!record.markdown) {
+			throw new MockApiError("Record has no content to export yet.");
+		}
+		const filename = record.title;
+		const now = nowIso();
+		let result: ExportResult;
+		if (format === "markdown") {
+			result = {
+				format: "markdown",
+				filename: `${filename}.md`,
+				mimeType: MARKDOWN_MIME,
+				blob: new Blob([record.markdown], { type: MARKDOWN_MIME }),
+			};
+			record.exportedMarkdownAt = now;
+		} else {
+			result = {
+				format: "docx",
+				filename: `${filename}.docx`,
+				mimeType: DOCX_MIME,
+				blob: await buildDocxBlob(recordToGeneratedOutput(record)),
+			};
+			record.exportedDocxAt = now;
+		}
+		record.status = "exported";
+		record.updatedAt = now;
+		return result;
+	},
+
+	async getIntegrationStatuses(): Promise<LocalIntegrationStatus[]> {
+		await delay(80);
+		return clone(buildIntegrationStatuses());
+	},
+
+	async getStorageStatus(): Promise<StorageStatus> {
+		await delay(80);
+		return clone(buildStorageStatus());
+	},
+
 	async listProjects() {
 		await delay(220);
 		return clone(mockDataset.projects);

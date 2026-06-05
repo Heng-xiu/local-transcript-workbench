@@ -32,6 +32,35 @@ export function formatDuration(totalSeconds: number): string {
 	return `${seconds}s`;
 }
 
+/**
+ * Absolute, locale-aware date-time for session metadata, e.g.
+ * `Jun 4, 2026, 9:00 AM`. Returns an empty string for unparseable input.
+ */
+export function formatDateTime(iso: string | undefined): string {
+	if (!iso) return "";
+	const ms = Date.parse(iso);
+	if (Number.isNaN(ms)) return "";
+	return new Date(ms).toLocaleString(undefined, {
+		year: "numeric",
+		month: "short",
+		day: "numeric",
+		hour: "numeric",
+		minute: "2-digit",
+	});
+}
+
+/** Human-readable bytes, e.g. `58.4 GB`. */
+export function formatBytes(bytes: number): string {
+	if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+	const units = ["B", "KB", "MB", "GB", "TB"];
+	const exponent = Math.min(
+		Math.floor(Math.log(bytes) / Math.log(1024)),
+		units.length - 1,
+	);
+	const value = bytes / 1024 ** exponent;
+	return `${value.toFixed(value >= 10 || exponent === 0 ? 0 : 1)} ${units[exponent]}`;
+}
+
 /** Relative time such as `just now`, `3h ago`, `2d ago`. */
 export function formatRelativeTime(
 	iso: string,

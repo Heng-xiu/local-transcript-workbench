@@ -1,4 +1,4 @@
-import type { OutputTemplate } from "@/features/ai/types";
+import type { OutputTemplate, OutputTemplateId } from "@/features/ai/types";
 
 /**
  * The mock backend's template catalogue. Served through `WorkbenchApi.listTemplates`.
@@ -36,3 +36,20 @@ export const OUTPUT_TEMPLATES: readonly OutputTemplate[] = [
 			"Synthesise the interview into themes, supporting verbatim quotes, surprising insights, and recommended follow-ups.",
 	},
 ] as const;
+
+const TEMPLATE_IDS = new Set<OutputTemplateId>(
+	OUTPUT_TEMPLATES.map((t) => t.id),
+);
+
+/** Narrow an arbitrary template id string to a known `OutputTemplateId`. */
+export function coerceTemplateId(value: string): OutputTemplateId {
+	return TEMPLATE_IDS.has(value as OutputTemplateId)
+		? (value as OutputTemplateId)
+		: "meeting-summary";
+}
+
+/** Human label for a template id (falls back to Meeting Summary). */
+export function templateName(value: string): string {
+	const id = coerceTemplateId(value);
+	return OUTPUT_TEMPLATES.find((t) => t.id === id)?.name ?? "Meeting Summary";
+}

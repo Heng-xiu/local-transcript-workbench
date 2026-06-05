@@ -9,11 +9,25 @@
  * streaming inside `generateOutput` without touching any UI code.
  */
 import type { GeneratedOutput } from "@/features/ai/types";
-import type { ExportRequest, ExportResult } from "@/features/export/types";
+import type {
+	ExportFormat,
+	ExportRequest,
+	ExportResult,
+} from "@/features/export/types";
 import type { LiveKitConnectionInfo } from "@/features/livekit-placeholder/types";
+import type { Meeting } from "@/features/meetings/types";
 import type { Project } from "@/features/projects/types";
+import type { MeetingRecord } from "@/features/records/types";
 import type { TranscriptSegment } from "@/features/segments/types";
-import type { AudioSource, Transcript } from "@/features/transcripts/types";
+import type {
+	LocalIntegrationStatus,
+	StorageStatus,
+} from "@/features/settings/types";
+import type {
+	AudioSource,
+	Transcript,
+	TranscriptListItem,
+} from "@/features/transcripts/types";
 import { env } from "@/lib/config/env";
 import type {
 	GenerateOptions,
@@ -37,6 +51,52 @@ async function request<T>(
 }
 
 export const httpApi: WorkbenchApi = {
+	listMeetings() {
+		return request<Meeting[]>("/meetings");
+	},
+	getMeeting(meetingId) {
+		return request<Meeting>(`/meetings/${encodeURIComponent(meetingId)}`);
+	},
+	listTranscriptListItems() {
+		return request<TranscriptListItem[]>("/transcripts");
+	},
+	listMeetingRecords() {
+		return request<MeetingRecord[]>("/records");
+	},
+	getMeetingRecord(recordId) {
+		return request<MeetingRecord>(`/records/${encodeURIComponent(recordId)}`);
+	},
+	generateMeetingRecord(transcriptId, templateId) {
+		return request<MeetingRecord>("/records/generate", {
+			method: "POST",
+			body: JSON.stringify({ transcriptId, templateId }),
+		});
+	},
+	async exportMeetingRecord(
+		recordId: string,
+		format: ExportFormat,
+	): Promise<ExportResult> {
+		const res = await fetch(
+			`${env.apiBaseUrl}/records/${encodeURIComponent(recordId)}/export`,
+			{
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({ format }),
+			},
+		);
+		if (!res.ok) throw new Error(`Export failed: HTTP ${res.status}`);
+		const blob = await res.blob();
+		const extension = format === "docx" ? "docx" : "md";
+		const filename =
+			res.headers.get("x-filename") ?? `meeting-record.${extension}`;
+		return { format, filename, mimeType: blob.type, blob };
+	},
+	getIntegrationStatuses() {
+		return request<LocalIntegrationStatus[]>("/system/integrations");
+	},
+	getStorageStatus() {
+		return request<StorageStatus>("/system/storage");
+	},
 	listProjects() {
 		return request<Project[]>("/projects");
 	},

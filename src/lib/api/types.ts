@@ -8,11 +8,25 @@
  * component code changes.
  */
 import type { GeneratedOutput, OutputTemplate } from "@/features/ai/types";
-import type { ExportRequest, ExportResult } from "@/features/export/types";
+import type {
+	ExportFormat,
+	ExportRequest,
+	ExportResult,
+} from "@/features/export/types";
 import type { LiveKitConnectionInfo } from "@/features/livekit-placeholder/types";
+import type { Meeting } from "@/features/meetings/types";
 import type { Project } from "@/features/projects/types";
+import type { MeetingRecord } from "@/features/records/types";
 import type { TranscriptSegment } from "@/features/segments/types";
-import type { AudioSource, Transcript } from "@/features/transcripts/types";
+import type {
+	LocalIntegrationStatus,
+	StorageStatus,
+} from "@/features/settings/types";
+import type {
+	AudioSource,
+	Transcript,
+	TranscriptListItem,
+} from "@/features/transcripts/types";
 
 export interface UpdateSegmentInput {
 	transcriptId: string;
@@ -36,14 +50,42 @@ export interface GenerateOptions {
 }
 
 export interface WorkbenchApi {
-	listProjects(): Promise<Project[]>;
-	getProject(projectId: string): Promise<Project>;
+	// --- Meetings (LiveKit-backed session history) ---------------------------
+	listMeetings(): Promise<Meeting[]>;
+	getMeeting(meetingId: string): Promise<Meeting>;
 
+	// --- Transcripts ---------------------------------------------------------
+	/** Lightweight list for the Transcripts section (status + relationships). */
+	listTranscriptListItems(): Promise<TranscriptListItem[]>;
 	getTranscript(transcriptId: string): Promise<Transcript>;
 	getAudioSource(transcriptId: string): Promise<AudioSource>;
 	listSegments(transcriptId: string): Promise<TranscriptSegment[]>;
 	updateSegment(input: UpdateSegmentInput): Promise<TranscriptSegment>;
 
+	// --- Meeting records (formal deliverable) --------------------------------
+	listMeetingRecords(): Promise<MeetingRecord[]>;
+	getMeetingRecord(recordId: string): Promise<MeetingRecord>;
+	/** Generate (or regenerate) the record for a transcript. */
+	generateMeetingRecord(
+		transcriptId: string,
+		templateId: string,
+	): Promise<MeetingRecord>;
+	/**
+	 * Export a record as Markdown or DOCX. Returns the produced blob so the
+	 * browser download + cache update stay on the clean side of the seam (a real
+	 * backend `/records/:id/export` returns the file the same way). Marks the
+	 * record `exported` and stamps the matching `exported*At`.
+	 */
+	exportMeetingRecord(
+		recordId: string,
+		format: ExportFormat,
+	): Promise<ExportResult>;
+
+	// --- Projects (optional grouping metadata; not a primary nav section) ----
+	listProjects(): Promise<Project[]>;
+	getProject(projectId: string): Promise<Project>;
+
+	// --- AI generation (transcript-side draft output) ------------------------
 	listTemplates(): Promise<OutputTemplate[]>;
 	generateOutput(
 		input: GenerateOutputInput,
@@ -51,6 +93,10 @@ export interface WorkbenchApi {
 	): Promise<GeneratedOutput>;
 
 	exportOutput(request: ExportRequest): Promise<ExportResult>;
+
+	// --- Settings / local integration status ---------------------------------
+	getIntegrationStatuses(): Promise<LocalIntegrationStatus[]>;
+	getStorageStatus(): Promise<StorageStatus>;
 
 	/** LiveKit placeholder — returns connection metadata, never connects. */
 	getLiveKitConnection(projectId: string): Promise<LiveKitConnectionInfo>;

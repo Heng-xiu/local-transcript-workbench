@@ -1,3 +1,31 @@
+/**
+ * Simplified MVP transcript lifecycle. Fine-grained backend/ASR pipeline states
+ * (extracting_audio, diarizing, aligning, …) are intentionally collapsed into
+ * `processing` and never surfaced in the MVP UI.
+ */
+export type TranscriptStatus = "processing" | "ready_for_edit" | "failed";
+
+export const TRANSCRIPT_STATUS_LABELS: Record<TranscriptStatus, string> = {
+	processing: "Processing",
+	ready_for_edit: "Ready for Edit",
+	failed: "Failed",
+};
+
+/**
+ * Lightweight transcript summary for the Transcripts list. The full editable
+ * {@link Transcript} (audio + speakers + segment bodies) is fetched separately
+ * and only when an item with status `ready_for_edit` is opened in the workbench.
+ */
+export interface TranscriptListItem {
+	id: string;
+	meetingId?: string;
+	recordId?: string;
+	title: string;
+	status: TranscriptStatus;
+	durationMs?: number;
+	updatedAt: string;
+}
+
 /** Where the audio for a transcript comes from. */
 export type AudioSourceKind = "recording" | "livekit";
 

@@ -2,6 +2,12 @@ import type { GeneratedOutput } from "@/features/ai/types";
 
 export type ExportFormat = "markdown" | "docx";
 
+/**
+ * Simple, UI-facing export lifecycle. Derived from the export mutation state
+ * (idle → exporting → exported, or failed) and shown next to the export action.
+ */
+export type ExportStatus = "idle" | "exporting" | "exported" | "failed";
+
 export interface ExportRequest {
 	format: ExportFormat;
 	/** Filename without extension; the correct extension is appended. */

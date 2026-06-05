@@ -1,10 +1,11 @@
 import { AudioWaveform, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
-import { ProjectStatusBadge } from "@/components/project-sidebar/ProjectStatusBadge";
 import { Button } from "@/components/ui/button";
-import type { Project } from "@/features/projects/types";
+import {
+	NAVIGATION_SECTIONS,
+	type NavigationSection,
+} from "@/features/navigation/types";
 import { env } from "@/lib/config/env";
-import { formatDuration } from "@/lib/utils/time";
 
 function ThemeToggle() {
 	const [dark, setDark] = useState(false);
@@ -39,23 +40,21 @@ function ThemeToggle() {
 	);
 }
 
-export function AppHeader({ project }: { project?: Project }) {
+export function AppHeader({ section }: { section: NavigationSection }) {
+	const meta = NAVIGATION_SECTIONS.find((s) => s.id === section);
 	return (
 		<header className="flex h-12 shrink-0 items-center justify-between border-b bg-card px-4">
 			<div className="flex items-center gap-3">
 				<span className="flex items-center gap-2 font-semibold">
 					<AudioWaveform className="size-5 text-primary" />
-					Transcript Workbench
+					Meeting Workbench
 				</span>
-				{project ? (
+				{meta ? (
 					<>
 						<span className="text-muted-foreground/40">/</span>
-						<span className="max-w-[28rem] truncate text-sm">
-							{project.name}
-						</span>
-						<ProjectStatusBadge status={project.status} />
-						<span className="text-xs text-muted-foreground tabular-nums">
-							{formatDuration(project.durationSec)}
+						<span className="text-sm">{meta.label}</span>
+						<span className="hidden text-xs text-muted-foreground sm:inline">
+							{meta.description}
 						</span>
 					</>
 				) : null}
