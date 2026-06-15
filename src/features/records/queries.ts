@@ -8,6 +8,7 @@ import type { ExportFormat } from "@/features/export/types";
 import { meetingKeys } from "@/features/meetings/queries";
 import { transcriptKeys } from "@/features/transcripts/queries";
 import { api } from "@/lib/api";
+import { fetchRecordVersionMarkdown } from "@/lib/api/meeting-api-records";
 import { downloadBlob } from "@/lib/utils/download";
 import type { MeetingRecord } from "./types";
 
@@ -40,6 +41,18 @@ export function useMeetingRecordQuery(recordId: string | undefined) {
 	return useQuery({
 		...recordQueryOptions(recordId ?? ""),
 		enabled: Boolean(recordId),
+	});
+}
+
+export function useRecordVersionMarkdownQuery(
+	recordId: string | undefined,
+	version: number | undefined,
+) {
+	return useQuery({
+		queryKey: [...recordKeys.detail(recordId ?? ""), "version", version],
+		queryFn: () =>
+			fetchRecordVersionMarkdown(recordId as string, version as number),
+		enabled: Boolean(recordId) && version !== undefined && version > 0,
 	});
 }
 

@@ -9,6 +9,7 @@ import {
 	Sparkles,
 	Video,
 } from "lucide-react";
+import { useState } from "react";
 import { MarkdownView } from "@/components/ai-output/MarkdownView";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -18,9 +19,11 @@ import { useMeetingsQuery } from "@/features/meetings/queries";
 import {
 	useGenerateMeetingRecordMutation,
 	useMeetingRecordQuery,
+	useRecordVersionMarkdownQuery,
 } from "@/features/records/queries";
 import { useTranscriptListItemsQuery } from "@/features/transcripts/queries";
 import { env } from "@/lib/config/env";
+import { formatDateTime } from "@/lib/utils/time";
 import { RecordExportControls } from "./RecordExportControls";
 import { RecordStatusBadge } from "./RecordStatusBadge";
 
@@ -70,6 +73,13 @@ export function MeetingRecordDetail({ recordId }: MeetingRecordDetailProps) {
 	const meetingsQuery = useMeetingsQuery();
 	const transcriptsQuery = useTranscriptListItemsQuery();
 	const generate = useGenerateMeetingRecordMutation();
+	const [selectedVersion, setSelectedVersion] = useState<number | undefined>(
+		undefined,
+	);
+	const versionMarkdownQuery = useRecordVersionMarkdownQuery(
+		recordId,
+		selectedVersion,
+	);
 
 	if (!recordId) return <EmptyState />;
 
@@ -107,6 +117,14 @@ export function MeetingRecordDetail({ recordId }: MeetingRecordDetailProps) {
 			templateId: record.templateId,
 		});
 	}
+
+	// Displayed markdown: version-switched markdown when a version is selected,
+	// otherwise the record's own (latest) markdown.
+	const displayMarkdown =
+		selectedVersion !== undefined ? versionMarkdownQuery.data : record.markdown;
+
+	const hasVersions =
+		record.versions !== undefined && record.versions.length > 0;
 
 	return (
 		<div className="flex h-full min-h-0 flex-col">
@@ -151,11 +169,60 @@ export function MeetingRecordDetail({ recordId }: MeetingRecordDetailProps) {
 						</p>
 					</div>
 				</div>
-			) : record.markdown ? (
+			) : displayMarkdown ? (
 				<>
+					{hasVersions ? (
+						<div className="flex items-center gap-2 border-b px-6 py-2">
+							<span className="shrink-0 text-xs font-medium text-muted-foreground">
+								Versions:
+							</span>
+							<div className="flex flex-wrap gap-1">
+								{record.versions?.map((v) => (
+									<button
+										key={v.version}
+										type="button"
+										onClick={() =>
+											setSelectedVersion(
+												selectedVersion === v.version ? undefined : v.version,
+											)
+										}
+										className={`rounded px-2 py-0.5 text-xs transition-colors ${
+											(selectedVersion === v.version) ||
+											(
+												selectedVersion === undefined &&
+													v.version === record.latestVersion
+											)
+												? "bg-primary text-primary-foreground"
+												: "bg-muted text-muted-foreground hover:bg-muted/80"
+										}`}
+										title={`${v.model} · ${formatDateTime(v.createdAt)}`}
+									>
+										v{v.version}
+									</button>
+								))}
+							</div>
+							<span className="ml-auto">
+								<Button
+									type="button"
+									variant="ghost"
+									size="sm"
+									onClick={runGeneration}
+									disabled={generate.isPending}
+									className="h-6 px-2 text-xs"
+								>
+									<RotateCcw className="size-3" /> Regenerate
+								</Button>
+							</span>
+						</div>
+					) : null}
 					<ScrollArea className="min-h-0 flex-1">
 						<div className="p-6">
-							<MarkdownView markdown={record.markdown} />
+							{versionMarkdownQuery.isPending &&
+							selectedVersion !== undefined ? (
+								<Skeleton className="h-64 w-full" />
+							) : (
+								<MarkdownView markdown={displayMarkdown} />
+							)}
 						</div>
 					</ScrollArea>
 					<RecordExportControls record={record} />
