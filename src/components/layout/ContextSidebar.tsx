@@ -7,6 +7,8 @@ interface ContextSidebarProps {
 	count?: number;
 	/** Optional one-line subtitle under the title. */
 	description?: string;
+	/** Optional control rendered at the right of the header (e.g. a "+" button). */
+	action?: ReactNode;
 	children: ReactNode;
 }
 
@@ -19,6 +21,7 @@ export function ContextSidebar({
 	title,
 	count,
 	description,
+	action,
 	children,
 }: ContextSidebarProps) {
 	return (
@@ -26,11 +29,14 @@ export function ContextSidebar({
 			<div className="border-b px-3 py-3">
 				<div className="flex items-center justify-between">
 					<h2 className="text-sm font-semibold">{title}</h2>
-					{typeof count === "number" ? (
-						<span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground tabular-nums">
-							{count}
-						</span>
-					) : null}
+					<div className="flex items-center gap-2">
+						{typeof count === "number" ? (
+							<span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground tabular-nums">
+								{count}
+							</span>
+						) : null}
+						{action}
+					</div>
 				</div>
 				{description ? (
 					<p className="mt-0.5 text-xs text-muted-foreground">{description}</p>

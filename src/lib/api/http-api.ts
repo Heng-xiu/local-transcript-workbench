@@ -57,6 +57,12 @@ export const httpApi: WorkbenchApi = {
 	getMeeting(meetingId) {
 		return request<Meeting>(`/meetings/${encodeURIComponent(meetingId)}`);
 	},
+	createMeeting(input) {
+		return request<Meeting>("/meetings", {
+			method: "POST",
+			body: JSON.stringify(input ?? {}),
+		});
+	},
 	listTranscriptListItems() {
 		return request<TranscriptListItem[]>("/transcripts");
 	},

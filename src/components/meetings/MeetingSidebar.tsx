@@ -1,8 +1,19 @@
-import { CalendarClock, Clock, FileCheck2, FileText, Mic } from "lucide-react";
+import {
+	CalendarClock,
+	Clock,
+	FileCheck2,
+	FileText,
+	Loader2,
+	Mic,
+	Plus,
+} from "lucide-react";
 import { useMemo } from "react";
 import { ContextSidebar } from "@/components/layout/ContextSidebar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMeetingsQuery } from "@/features/meetings/queries";
+import {
+	useCreateMeetingMutation,
+	useMeetingsQuery,
+} from "@/features/meetings/queries";
 import type { Meeting } from "@/features/meetings/types";
 import { useMeetingRecordsQuery } from "@/features/records/queries";
 import {
@@ -100,6 +111,7 @@ export function MeetingSidebar({
 	onSelect,
 }: MeetingSidebarProps) {
 	const meetingsQuery = useMeetingsQuery();
+	const createMutation = useCreateMeetingMutation();
 	const transcriptsQuery = useTranscriptListItemsQuery();
 	const recordsQuery = useMeetingRecordsQuery();
 
@@ -122,7 +134,33 @@ export function MeetingSidebar({
 			title="Meetings"
 			count={meetingsQuery.data?.length}
 			description="LiveKit session history"
+			action={
+				<button
+					type="button"
+					aria-label="新增會議"
+					disabled={createMutation.isPending}
+					onClick={() =>
+						createMutation.mutate(undefined, {
+							onSuccess: (meeting) => onSelect(meeting.id),
+						})
+					}
+					className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+				>
+					<Plus className="size-4" />
+				</button>
+			}
 		>
+			{createMutation.isPending ? (
+				<div className="flex items-center gap-2 rounded-md border border-border bg-accent/50 px-3 py-2.5 text-sm text-muted-foreground">
+					<Loader2 className="size-4 animate-spin" />
+					建立中…
+				</div>
+			) : null}
+			{createMutation.isError ? (
+				<p className="px-3 py-2 text-sm text-destructive">
+					建立會議失敗，請重試。
+				</p>
+			) : null}
 			{meetingsQuery.isPending ? (
 				SKELETON_KEYS.map((key) => (
 					<Skeleton key={key} className="h-20 w-full rounded-md" />
