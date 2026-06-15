@@ -13,6 +13,12 @@ interface ImportMetaEnv {
 	readonly VITE_AI_GENERATION_ENDPOINT?: string;
 	/** Backend endpoint that streams recording audio assets. */
 	readonly VITE_RECORDING_ASSET_ENDPOINT?: string;
+	/** Sentry/GlitchTip DSN. Empty => error reporting disabled. */
+	readonly VITE_SENTRY_DSN?: string;
+	/** Sentry environment tag, e.g. development | production. */
+	readonly VITE_SENTRY_ENVIRONMENT?: string;
+	/** Sentry traces sample rate, 0..1. */
+	readonly VITE_SENTRY_TRACES_SAMPLE_RATE?: string;
 }
 
 interface ImportMeta {

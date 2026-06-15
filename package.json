@@ -19,6 +19,7 @@
     "verify": "npm run check && npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {
+    "@sentry/react": "^10.57.0",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-devtools": "latest",
     "@tanstack/react-form": "^1.33.0",
