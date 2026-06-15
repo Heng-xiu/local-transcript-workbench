@@ -3,6 +3,11 @@
 interface ImportMetaEnv {
 	/** Base URL of the self-hosted workbench backend (empty => use mock API). */
 	readonly VITE_API_BASE_URL?: string;
+	/**
+	 * Base URL of the meeting-api transcript service, including the `/api`
+	 * prefix (empty => transcript reads use the mock API).
+	 */
+	readonly VITE_MEETING_API_BASE_URL?: string;
 	/** WebSocket URL of the local LiveKit server (placeholder in MVP). */
 	readonly VITE_LIVEKIT_WS_URL?: string;
 	/** Backend endpoint that mints short-lived LiveKit access tokens. */

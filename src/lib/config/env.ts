@@ -17,10 +17,18 @@ function str(value: string | undefined, fallback = ""): string {
 }
 
 const apiBaseUrl = str(import.meta.env.VITE_API_BASE_URL);
+const meetingApiBaseUrl = str(import.meta.env.VITE_MEETING_API_BASE_URL);
 
 export const env = {
 	/** Base URL of the self-hosted backend. Empty string => mock mode. */
 	apiBaseUrl,
+	/**
+	 * Base URL of the meeting-api transcript service (expected to include the
+	 * `/api` prefix, e.g. `http://localhost:4001/api`). Empty => transcript reads
+	 * stay on the mock API. Independent of {@link apiBaseUrl} so wiring real
+	 * transcripts never flips the rest of the app to a non-existent backend.
+	 */
+	meetingApiBaseUrl,
 	/** LiveKit signalling websocket (placeholder; never connected in MVP). */
 	livekitWsUrl: str(import.meta.env.VITE_LIVEKIT_WS_URL),
 	/** Endpoint that mints LiveKit tokens (placeholder; never called in MVP). */
@@ -44,6 +52,13 @@ export const env = {
 	 */
 	get useMockApi(): boolean {
 		return apiBaseUrl.length === 0;
+	},
+	/**
+	 * When a meeting-api base URL is configured, transcript *reads* are routed
+	 * there (hybrid mode); everything else stays on the selected base adapter.
+	 */
+	get useMeetingApiTranscripts(): boolean {
+		return meetingApiBaseUrl.length > 0;
 	},
 } as const;
 
