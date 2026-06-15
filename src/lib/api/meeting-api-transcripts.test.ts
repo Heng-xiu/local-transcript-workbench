@@ -74,6 +74,63 @@ describe("meetingApiTranscripts", () => {
 		expect(fetchMock).toHaveBeenCalledWith(`${BASE}/transcripts/t1/segments`);
 	});
 
+	it("updateSegment PATCHes /transcripts/:id/segments/:sid with text + baseRevision", async () => {
+		const segment = { id: "s1", text: "edited", revision: 4 };
+		const fetchMock = mockFetchOnce(segment);
+		const adapter = await loadAdapter();
+
+		await expect(
+			adapter.updateSegment({
+				transcriptId: "t1",
+				segmentId: "s1",
+				text: "edited",
+				baseRevision: 3,
+			}),
+		).resolves.toEqual(segment);
+
+		expect(fetchMock).toHaveBeenCalledWith(
+			`${BASE}/transcripts/t1/segments/s1`,
+			expect.objectContaining({
+				method: "PATCH",
+				body: JSON.stringify({ text: "edited", baseRevision: 3 }),
+				headers: expect.objectContaining({
+					"content-type": "application/json",
+				}),
+			}),
+		);
+	});
+
+	it("updateSegment encodes ids in the path", async () => {
+		const fetchMock = mockFetchOnce({ id: "s 1" });
+		const adapter = await loadAdapter();
+
+		await adapter.updateSegment({
+			transcriptId: "t 1",
+			segmentId: "s 1",
+			text: "x",
+			baseRevision: 0,
+		});
+
+		expect(fetchMock).toHaveBeenCalledWith(
+			`${BASE}/transcripts/t%201/segments/s%201`,
+			expect.anything(),
+		);
+	});
+
+	it("updateSegment throws on a non-2xx response (e.g. 409 conflict)", async () => {
+		mockFetchOnce(null, false, 409);
+		const adapter = await loadAdapter();
+
+		await expect(
+			adapter.updateSegment({
+				transcriptId: "t1",
+				segmentId: "s1",
+				text: "edited",
+				baseRevision: 3,
+			}),
+		).rejects.toThrow("HTTP 409 for /transcripts/t1/segments/s1");
+	});
+
 	it("builds the URL as base + path with no double slash", async () => {
 		const fetchMock = mockFetchOnce([]);
 		const adapter = await loadAdapter();

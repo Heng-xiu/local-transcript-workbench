@@ -34,7 +34,7 @@ describe("api adapter composition", () => {
 		expect(api.updateSegment).toBe(mockApi.updateSegment);
 	});
 
-	it("with meeting-api base URL set, the four reads come from meeting-api; updateSegment stays mock", async () => {
+	it("with meeting-api base URL set, the four reads and updateSegment come from meeting-api", async () => {
 		vi.stubEnv("VITE_API_BASE_URL", "");
 		vi.stubEnv("VITE_MEETING_API_BASE_URL", "http://localhost:4001/api");
 		const { api, mockApi, meetingApiTranscripts } = await loadModules();
@@ -43,8 +43,9 @@ describe("api adapter composition", () => {
 			expect(api[method]).toBe(meetingApiTranscripts[method]);
 			expect(api[method]).not.toBe(mockApi[method]);
 		}
-		// Editing persistence is out of scope for plan 015 — still the mock base.
-		expect(api.updateSegment).toBe(mockApi.updateSegment);
+		// Segment edit (plan 017) now persists through meeting-api too.
+		expect(api.updateSegment).toBe(meetingApiTranscripts.updateSegment);
+		expect(api.updateSegment).not.toBe(mockApi.updateSegment);
 		// Non-transcript methods are untouched.
 		expect(api.listMeetingRecords).toBe(mockApi.listMeetingRecords);
 	});
