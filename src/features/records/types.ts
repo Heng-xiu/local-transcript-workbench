@@ -19,6 +19,17 @@ export const MEETING_RECORD_STATUS_LABELS: Record<MeetingRecordStatus, string> =
 		exported: "Exported",
 	};
 
+export interface MeetingRecordVersion {
+	id: string;
+	version: number;
+	templateId: string;
+	model: string;
+	/** 輸出時間（meeting-api MeetingRecordVersion.createdAt）。 */
+	createdAt: string;
+	promptTokens?: number | null;
+	completionTokens?: number | null;
+}
+
 export interface MeetingRecord {
 	id: string;
 	meetingId?: string;
@@ -32,4 +43,7 @@ export interface MeetingRecord {
 	exportedMarkdownAt?: string;
 	exportedDocxAt?: string;
 	updatedAt: string;
+	/** meeting-api 回傳的版本歷史（mock 模式為 undefined）。 */
+	versions?: MeetingRecordVersion[];
+	latestVersion?: number;
 }

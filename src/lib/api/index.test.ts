@@ -14,7 +14,14 @@ async function loadModules() {
 	const { mockApi } = await import("./mock-api");
 	const { meetingApiTranscripts } = await import("./meeting-api-transcripts");
 	const { meetingApiMeetings } = await import("./meeting-api-meetings");
-	return { api, mockApi, meetingApiTranscripts, meetingApiMeetings };
+	const { meetingApiRecords } = await import("./meeting-api-records");
+	return {
+		api,
+		mockApi,
+		meetingApiTranscripts,
+		meetingApiMeetings,
+		meetingApiRecords,
+	};
 }
 
 describe("api adapter composition", () => {
@@ -42,8 +49,13 @@ describe("api adapter composition", () => {
 	it("with meeting-api base URL set, the four reads and updateSegment come from meeting-api", async () => {
 		vi.stubEnv("VITE_API_BASE_URL", "");
 		vi.stubEnv("VITE_MEETING_API_BASE_URL", "http://localhost:4001/api");
-		const { api, mockApi, meetingApiTranscripts, meetingApiMeetings } =
-			await loadModules();
+		const {
+			api,
+			mockApi,
+			meetingApiTranscripts,
+			meetingApiMeetings,
+			meetingApiRecords,
+		} = await loadModules();
 
 		for (const method of READ_METHODS) {
 			expect(api[method]).toBe(meetingApiTranscripts[method]);
@@ -57,7 +69,20 @@ describe("api adapter composition", () => {
 			expect(api[m]).toBe(meetingApiMeetings[m]);
 			expect(api[m]).not.toBe(mockApi[m]);
 		}
-		// Non-transcript, non-meeting methods are untouched.
+		// generateMeetingRecord now comes from meetingApiRecords (plan 022).
+		expect(api.generateMeetingRecord).toBe(
+			meetingApiRecords.generateMeetingRecord,
+		);
+		expect(api.generateMeetingRecord).not.toBe(mockApi.generateMeetingRecord);
+		// Non-transcript, non-meeting, non-records methods are untouched.
 		expect(api.listMeetingRecords).toBe(mockApi.listMeetingRecords);
+	});
+
+	it("without meeting-api base URL, generateMeetingRecord comes from the base (mock)", async () => {
+		vi.stubEnv("VITE_API_BASE_URL", "");
+		vi.stubEnv("VITE_MEETING_API_BASE_URL", "");
+		const { api, mockApi } = await loadModules();
+
+		expect(api.generateMeetingRecord).toBe(mockApi.generateMeetingRecord);
 	});
 });
