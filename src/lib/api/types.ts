@@ -36,6 +36,13 @@ export interface UpdateSegmentInput {
 	baseRevision: number;
 }
 
+export interface CreateMeetingInput {
+	/** Optional title; backend falls back to the generated meeting code. */
+	title?: string;
+	/** Optional owner display name; backend defaults to "Local Host". */
+	ownerDisplayName?: string;
+}
+
 export interface GenerateOutputInput {
 	projectId: string;
 	transcriptId: string;
@@ -53,6 +60,7 @@ export interface WorkbenchApi {
 	// --- Meetings (LiveKit-backed session history) ---------------------------
 	listMeetings(): Promise<Meeting[]>;
 	getMeeting(meetingId: string): Promise<Meeting>;
+	createMeeting(input?: CreateMeetingInput): Promise<Meeting>;
 
 	// --- Transcripts ---------------------------------------------------------
 	/** Lightweight list for the Transcripts section (status + relationships). */

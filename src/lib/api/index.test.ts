@@ -13,7 +13,8 @@ async function loadModules() {
 	const { api } = await import("./index");
 	const { mockApi } = await import("./mock-api");
 	const { meetingApiTranscripts } = await import("./meeting-api-transcripts");
-	return { api, mockApi, meetingApiTranscripts };
+	const { meetingApiMeetings } = await import("./meeting-api-meetings");
+	return { api, mockApi, meetingApiTranscripts, meetingApiMeetings };
 }
 
 describe("api adapter composition", () => {
@@ -32,12 +33,17 @@ describe("api adapter composition", () => {
 		}
 		// updateSegment also stays on the mock base.
 		expect(api.updateSegment).toBe(mockApi.updateSegment);
+		// Meetings methods also stay on the mock base.
+		for (const m of ["listMeetings", "getMeeting", "createMeeting"] as const) {
+			expect(api[m]).toBe(mockApi[m]);
+		}
 	});
 
 	it("with meeting-api base URL set, the four reads and updateSegment come from meeting-api", async () => {
 		vi.stubEnv("VITE_API_BASE_URL", "");
 		vi.stubEnv("VITE_MEETING_API_BASE_URL", "http://localhost:4001/api");
-		const { api, mockApi, meetingApiTranscripts } = await loadModules();
+		const { api, mockApi, meetingApiTranscripts, meetingApiMeetings } =
+			await loadModules();
 
 		for (const method of READ_METHODS) {
 			expect(api[method]).toBe(meetingApiTranscripts[method]);
@@ -46,7 +52,12 @@ describe("api adapter composition", () => {
 		// Segment edit (plan 017) now persists through meeting-api too.
 		expect(api.updateSegment).toBe(meetingApiTranscripts.updateSegment);
 		expect(api.updateSegment).not.toBe(mockApi.updateSegment);
-		// Non-transcript methods are untouched.
+		// Meetings methods now come from meetingApiMeetings (plan 020).
+		for (const m of ["listMeetings", "getMeeting", "createMeeting"] as const) {
+			expect(api[m]).toBe(meetingApiMeetings[m]);
+			expect(api[m]).not.toBe(mockApi[m]);
+		}
+		// Non-transcript, non-meeting methods are untouched.
 		expect(api.listMeetingRecords).toBe(mockApi.listMeetingRecords);
 	});
 });

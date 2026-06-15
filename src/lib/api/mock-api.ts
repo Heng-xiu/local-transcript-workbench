@@ -12,6 +12,7 @@ import type {
 	ExportResult,
 } from "@/features/export/types";
 import type { LiveKitConnectionInfo } from "@/features/livekit-placeholder/types";
+import type { Meeting } from "@/features/meetings/types";
 import type { Project } from "@/features/projects/types";
 import type { MeetingRecord } from "@/features/records/types";
 import type { TranscriptSegment } from "@/features/segments/types";
@@ -107,6 +108,23 @@ export const mockApi: WorkbenchApi = {
 		await delay(120);
 		const meeting = workbenchData.meetingById.get(meetingId);
 		if (!meeting) throw new MockApiError(`Meeting not found: ${meetingId}`);
+		return clone(meeting);
+	},
+
+	async createMeeting(input) {
+		await delay(200);
+		const now = new Date().toISOString();
+		const id = `mtg_${Math.random().toString(36).slice(2, 8)}`;
+		const meeting: Meeting = {
+			id,
+			title: input?.title ?? "未命名會議",
+			status: "scheduled",
+			livekitRoomName: `meeting-${id}`,
+			scheduledAt: now,
+			updatedAt: now,
+		};
+		workbenchData.meetings.unshift(meeting);
+		workbenchData.meetingById.set(id, meeting);
 		return clone(meeting);
 	},
 
