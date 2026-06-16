@@ -44,6 +44,9 @@ describe("api adapter composition", () => {
 		for (const m of ["listMeetings", "getMeeting", "createMeeting"] as const) {
 			expect(api[m]).toBe(mockApi[m]);
 		}
+		// Records methods also stay on the mock base (plan 025).
+		expect(api.listMeetingRecords).toBe(mockApi.listMeetingRecords);
+		expect(api.getMeetingRecord).toBe(mockApi.getMeetingRecord);
 	});
 
 	it("with meeting-api base URL set, the four reads and updateSegment come from meeting-api", async () => {
@@ -74,8 +77,11 @@ describe("api adapter composition", () => {
 			meetingApiRecords.generateMeetingRecord,
 		);
 		expect(api.generateMeetingRecord).not.toBe(mockApi.generateMeetingRecord);
-		// Non-transcript, non-meeting, non-records methods are untouched.
-		expect(api.listMeetingRecords).toBe(mockApi.listMeetingRecords);
+		// listMeetingRecords + getMeetingRecord now come from meetingApiRecords (plan 025).
+		expect(api.listMeetingRecords).toBe(meetingApiRecords.listMeetingRecords);
+		expect(api.listMeetingRecords).not.toBe(mockApi.listMeetingRecords);
+		expect(api.getMeetingRecord).toBe(meetingApiRecords.getMeetingRecord);
+		expect(api.getMeetingRecord).not.toBe(mockApi.getMeetingRecord);
 	});
 
 	it("without meeting-api base URL, generateMeetingRecord comes from the base (mock)", async () => {

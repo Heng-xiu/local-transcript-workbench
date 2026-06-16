@@ -92,7 +92,29 @@ export const meetingApiRecords = {
 		}
 		return toRecord(summary, markdown);
 	},
-} satisfies Pick<WorkbenchApi, "generateMeetingRecord">;
+
+	async listMeetingRecords(): Promise<MeetingRecord[]> {
+		const rows = await request<RecordSummaryDto[]>(`/records`);
+		return rows.map((dto) => toRecord(dto));
+	},
+
+	async getMeetingRecord(recordId: string): Promise<MeetingRecord> {
+		const summary = await request<RecordSummaryDto>(
+			`/records/${encodeURIComponent(recordId)}`,
+		);
+		let markdown: string | undefined;
+		if (summary.status === "ready" && summary.latestVersion > 0) {
+			const content = await request<VersionContentDto>(
+				`/records/${encodeURIComponent(summary.id)}/versions/${summary.latestVersion}`,
+			);
+			markdown = content.markdown;
+		}
+		return toRecord(summary, markdown);
+	},
+} satisfies Pick<
+	WorkbenchApi,
+	"generateMeetingRecord" | "listMeetingRecords" | "getMeetingRecord"
+>;
 
 /** 取某一版本的 Markdown（版本切換時用）。非 WorkbenchApi port 方法。 */
 export async function fetchRecordVersionMarkdown(

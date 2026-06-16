@@ -202,4 +202,125 @@ describe("meetingApiRecords", () => {
 			adapter.generateMeetingRecord("tr-1", "tmpl-standard"),
 		).rejects.toThrow("HTTP 500 for /transcripts/tr-1/records");
 	});
+
+	// ── listMeetingRecords ────────────────────────────────────────────────────
+
+	it("listMeetingRecords GETs /records and maps the array", async () => {
+		const summary2 = {
+			...readySummary,
+			id: "rec-2",
+			title: "Design Review",
+			status: "generating" as const,
+			latestVersion: 0,
+			versions: [],
+		};
+		const fetchMock = mockFetchSequence([
+			{ payload: [readySummary, summary2] },
+		]);
+		const { adapter } = await loadAdapter();
+
+		const result = await adapter.listMeetingRecords();
+
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(fetchMock).toHaveBeenCalledWith(`${BASE}/records`);
+		expect(result).toHaveLength(2);
+		expect(result[0]).toMatchObject({
+			id: "rec-1",
+			title: "Weekly Sync",
+			status: "ready",
+			latestVersion: 2,
+		});
+		expect(result[0].versions).toHaveLength(2);
+		expect(result[1]).toMatchObject({
+			id: "rec-2",
+			title: "Design Review",
+			status: "generating",
+			latestVersion: 0,
+		});
+		// No markdown on list items (no second fetch)
+		expect(result[0].markdown).toBeUndefined();
+	});
+
+	it("listMeetingRecords returns empty array when API returns []", async () => {
+		mockFetchSequence([{ payload: [] }]);
+		const { adapter } = await loadAdapter();
+
+		const result = await adapter.listMeetingRecords();
+
+		expect(result).toEqual([]);
+	});
+
+	// ── getMeetingRecord ──────────────────────────────────────────────────────
+
+	it("getMeetingRecord with status ready: fetches summary then version markdown", async () => {
+		const fetchMock = mockFetchSequence([
+			{ payload: readySummary },
+			{ payload: versionContent },
+		]);
+		const { adapter } = await loadAdapter();
+
+		const result = await adapter.getMeetingRecord("rec-1");
+
+		expect(fetchMock).toHaveBeenCalledTimes(2);
+		expect(fetchMock).toHaveBeenNthCalledWith(1, `${BASE}/records/rec-1`);
+		expect(fetchMock).toHaveBeenNthCalledWith(
+			2,
+			`${BASE}/records/rec-1/versions/2`,
+		);
+		expect(result.markdown).toBe("# Weekly Sync\n\nAction items...");
+		expect(result.id).toBe("rec-1");
+		expect(result.status).toBe("ready");
+		expect(result.latestVersion).toBe(2);
+		expect(result.versions).toHaveLength(2);
+	});
+
+	it("getMeetingRecord with status generating: no second fetch, markdown undefined", async () => {
+		const generatingSummary = {
+			...readySummary,
+			status: "generating" as const,
+			latestVersion: 0,
+			versions: [],
+		};
+		const fetchMock = mockFetchSequence([{ payload: generatingSummary }]);
+		const { adapter } = await loadAdapter();
+
+		const result = await adapter.getMeetingRecord("rec-1");
+
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(result.markdown).toBeUndefined();
+		expect(result.status).toBe("generating");
+	});
+
+	it("getMeetingRecord with status failed: no second fetch, markdown undefined", async () => {
+		const failedSummary = {
+			...readySummary,
+			status: "failed" as const,
+			latestVersion: 0,
+			versions: [],
+		};
+		const fetchMock = mockFetchSequence([{ payload: failedSummary }]);
+		const { adapter } = await loadAdapter();
+
+		const result = await adapter.getMeetingRecord("rec-1");
+
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(result.markdown).toBeUndefined();
+		expect(result.status).toBe("failed");
+	});
+
+	it("getMeetingRecord url-encodes recordId in the path", async () => {
+		const generatingSummary = {
+			...readySummary,
+			id: "rec id/1",
+			status: "generating" as const,
+			latestVersion: 0,
+			versions: [],
+		};
+		const fetchMock = mockFetchSequence([{ payload: generatingSummary }]);
+		const { adapter } = await loadAdapter();
+
+		await adapter.getMeetingRecord("rec id/1");
+
+		expect(fetchMock).toHaveBeenCalledWith(`${BASE}/records/rec%20id%2F1`);
+	});
 });
