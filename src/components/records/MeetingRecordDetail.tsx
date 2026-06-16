@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import {
 	AlertTriangle,
 	Cloud,
@@ -17,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { templateName } from "@/features/ai/templates";
 import { useMeetingsQuery } from "@/features/meetings/queries";
 import {
+	recordKeys,
 	useGenerateMeetingRecordMutation,
 	useMeetingRecordQuery,
 	useRecordVersionMarkdownQuery,
@@ -70,6 +72,7 @@ function EmptyState() {
 }
 
 export function MeetingRecordDetail({ recordId }: MeetingRecordDetailProps) {
+	const queryClient = useQueryClient();
 	const recordQuery = useMeetingRecordQuery(recordId);
 	const meetingsQuery = useMeetingsQuery();
 	const transcriptsQuery = useTranscriptListItemsQuery();
@@ -89,11 +92,15 @@ export function MeetingRecordDetail({ recordId }: MeetingRecordDetailProps) {
 	useEffect(() => {
 		if (prevStatusRef.current === "generating" && currentStatus === "ready") {
 			setJustCompleted(true);
+			// Sidebar list cache was last refreshed while this record was still
+			// "generating"; refresh it now so the status badge / latest version
+			// reflect the just-completed record without a manual reload.
+			void queryClient.invalidateQueries({ queryKey: recordKeys.list() });
 		} else if (currentStatus !== "ready") {
 			setJustCompleted(false);
 		}
 		prevStatusRef.current = currentStatus;
-	}, [currentStatus]);
+	}, [currentStatus, queryClient]);
 
 	// Typewriter reveal: only for the latest version right after generation completes.
 	const typewriterEnabled = justCompleted && selectedVersion === undefined;
