@@ -41,6 +41,9 @@ export function useMeetingRecordQuery(recordId: string | undefined) {
 	return useQuery({
 		...recordQueryOptions(recordId ?? ""),
 		enabled: Boolean(recordId),
+		// Back-end async generation: poll every 1.5 s while generating, stop on ready/failed.
+		refetchInterval: (query) =>
+			query.state.data?.status === "generating" ? 1500 : false,
 	});
 }
 
