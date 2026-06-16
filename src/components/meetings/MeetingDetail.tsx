@@ -17,9 +17,11 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { buildMeetingRoomUrl } from "@/features/meetings/meeting-room-url";
 import { useMeetingQuery } from "@/features/meetings/queries";
 import { useMeetingRecordsQuery } from "@/features/records/queries";
 import { useTranscriptListItemsQuery } from "@/features/transcripts/queries";
+import { env } from "@/lib/config/env";
 import { formatDateTime, formatDuration } from "@/lib/utils/time";
 import { MeetingStatusBadge } from "./MeetingStatusBadge";
 
@@ -77,6 +79,8 @@ export function MeetingDetail({
 	}
 
 	const meeting = meetingQuery.data;
+	const meetingUrl = buildMeetingRoomUrl(env.meetBaseUrl, meeting.id);
+	const joinable = meeting.status !== "ended";
 	const transcript = meeting.transcriptId
 		? transcriptsQuery.data?.find((t) => t.id === meeting.transcriptId)
 		: undefined;
@@ -131,21 +135,35 @@ export function MeetingDetail({
 								<Radio className="size-4" /> Local LiveKit room
 							</CardTitle>
 							<CardDescription>
-								Placeholder — the MVP never opens a real LiveKit connection.
+								Opens the room in the meet frontend; meet handles the LiveKit
+								connection.
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="flex flex-col gap-3">
 							<Field label="Room" value={meeting.livekitRoomName ?? ""} />
-							<Button
-								type="button"
-								variant="outline"
-								size="sm"
-								className="w-fit"
-								disabled={meeting.status === "ended"}
-								title="LiveKit join is a placeholder in the MVP."
-							>
-								<Video className="size-4" /> Join meeting
-							</Button>
+							{joinable ? (
+								<Button asChild variant="outline" size="sm" className="w-fit">
+									<a
+										href={meetingUrl}
+										target="_blank"
+										rel="noopener noreferrer"
+										title="在新分頁開啟 meet 會議室"
+									>
+										<Video className="size-4" /> Join meeting
+									</a>
+								</Button>
+							) : (
+								<Button
+									type="button"
+									variant="outline"
+									size="sm"
+									className="w-fit"
+									disabled
+									title="會議已結束，無法加入"
+								>
+									<Video className="size-4" /> Join meeting
+								</Button>
+							)}
 						</CardContent>
 					</Card>
 

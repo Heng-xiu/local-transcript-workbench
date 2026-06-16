@@ -18,6 +18,10 @@ function str(value: string | undefined, fallback = ""): string {
 
 const apiBaseUrl = str(import.meta.env.VITE_API_BASE_URL);
 const meetingApiBaseUrl = str(import.meta.env.VITE_MEETING_API_BASE_URL);
+const meetBaseUrl = str(
+	import.meta.env.VITE_MEET_BASE_URL,
+	"http://localhost:4000",
+);
 
 export const env = {
 	/** Base URL of the self-hosted backend. Empty string => mock mode. */
@@ -46,6 +50,14 @@ export const env = {
 	 */
 	aiGenerationEndpoint: str(import.meta.env.VITE_AI_GENERATION_ENDPOINT),
 	recordingAssetEndpoint: str(import.meta.env.VITE_RECORDING_ASSET_ENDPOINT),
+	/**
+	 * Base URL of the meet/ meeting frontend (Next.js, dev port 4000). The
+	 * "Join meeting" action opens `${meetBaseUrl}/rooms/{meetingCode}` in a new
+	 * tab; meet/ handles the LiveKit connection. workbench never connects to
+	 * LiveKit itself. Defaults to local dev; set in production to the deployed
+	 * meet origin.
+	 */
+	meetBaseUrl,
 	/**
 	 * When no backend base URL is configured we serve everything from the
 	 * in-browser mock API. Flip this by setting `VITE_API_BASE_URL`.
