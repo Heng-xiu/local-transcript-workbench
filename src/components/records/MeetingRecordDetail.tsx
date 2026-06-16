@@ -9,7 +9,7 @@ import {
 	Sparkles,
 	Video,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MarkdownView } from "@/components/ai-output/MarkdownView";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -21,6 +21,7 @@ import {
 	useMeetingRecordQuery,
 	useRecordVersionMarkdownQuery,
 } from "@/features/records/queries";
+import { useTypewriter } from "@/features/records/use-typewriter";
 import { useTranscriptListItemsQuery } from "@/features/transcripts/queries";
 import { env } from "@/lib/config/env";
 import { formatDateTime } from "@/lib/utils/time";
@@ -81,6 +82,27 @@ export function MeetingRecordDetail({ recordId }: MeetingRecordDetailProps) {
 		selectedVersion,
 	);
 
+	// Track generating→ready transition to trigger typewriter on just-completed records.
+	const prevStatusRef = useRef<string | undefined>(undefined);
+	const [justCompleted, setJustCompleted] = useState(false);
+	const currentStatus = recordQuery.data?.status;
+	useEffect(() => {
+		if (prevStatusRef.current === "generating" && currentStatus === "ready") {
+			setJustCompleted(true);
+		} else if (currentStatus !== "ready") {
+			setJustCompleted(false);
+		}
+		prevStatusRef.current = currentStatus;
+	}, [currentStatus]);
+
+	// Typewriter reveal: only for the latest version right after generation completes.
+	const typewriterEnabled = justCompleted && selectedVersion === undefined;
+	const displayMarkdownRaw =
+		selectedVersion !== undefined
+			? versionMarkdownQuery.data
+			: recordQuery.data?.markdown;
+	const revealed = useTypewriter(displayMarkdownRaw ?? "", typewriterEnabled);
+
 	if (!recordId) return <EmptyState />;
 
 	if (recordQuery.isPending) {
@@ -119,7 +141,8 @@ export function MeetingRecordDetail({ recordId }: MeetingRecordDetailProps) {
 	}
 
 	// Displayed markdown: version-switched markdown when a version is selected,
-	// otherwise the record's own (latest) markdown.
+	// otherwise the record's own (latest) markdown. When typewriter is active,
+	// use the progressively-revealed substring; otherwise the full text.
 	const displayMarkdown =
 		selectedVersion !== undefined ? versionMarkdownQuery.data : record.markdown;
 
@@ -221,7 +244,7 @@ export function MeetingRecordDetail({ recordId }: MeetingRecordDetailProps) {
 							selectedVersion !== undefined ? (
 								<Skeleton className="h-64 w-full" />
 							) : (
-								<MarkdownView markdown={displayMarkdown} />
+								<MarkdownView markdown={revealed} />
 							)}
 						</div>
 					</ScrollArea>
