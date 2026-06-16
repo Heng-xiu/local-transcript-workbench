@@ -8,6 +8,8 @@ interface ImportMetaEnv {
 	 * prefix (empty => transcript reads use the mock API).
 	 */
 	readonly VITE_MEETING_API_BASE_URL?: string;
+	/** Base URL of the meet/ meeting frontend (Next.js, dev port 4000). */
+	readonly VITE_MEET_BASE_URL?: string;
 	/** WebSocket URL of the local LiveKit server (placeholder in MVP). */
 	readonly VITE_LIVEKIT_WS_URL?: string;
 	/** Backend endpoint that mints short-lived LiveKit access tokens. */
