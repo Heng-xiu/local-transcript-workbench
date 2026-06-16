@@ -16,9 +16,9 @@ const base = env.useMockApi ? mockApi : httpApi;
 /**
  * Hybrid mode: when `VITE_MEETING_API_BASE_URL` is set, the four transcript
  * *read* methods plus `updateSegment` (segment edit), meetings (list/get/create),
- * and `generateMeetingRecord` are routed to meeting-api while every other method
- * stays on the base adapter. When it is unset, `api === base`, identical to the
- * previous behaviour.
+ * and records (`generateMeetingRecord` + `listMeetingRecords` + `getMeetingRecord`)
+ * are routed to meeting-api while every other method stays on the base adapter.
+ * When it is unset, `api === base`, identical to the previous behaviour.
  */
 export const api: WorkbenchApi = env.useMeetingApiTranscripts
 	? {
